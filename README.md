@@ -1,63 +1,14 @@
-# bicep-types-az.generator
-Bicep type definition generator for ARM resources
 
-## AutoRest extension configuration
+# Contributing
 
-``` yaml
-load-priority: 1000
-pipeline-model: v3
-```
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
 
-``` yaml
-title: none
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repos using our CLA.
 
-pass-thru:
-  - subset-reducer
-  - tree-shaker
-
-pipeline:
-  azureresourceschema/imodeler2:
-    input: openapi-document/multi-api/identity
-    scope: azureresourceschema
-  azureresourceschema/commonmarker:
-    input: imodeler2
-  azureresourceschema/cm/transform:
-    input: commonmarker
-  azureresourceschema/cm/emitter:
-    input: transform
-    scope: scope-cm/emitter
-  azureresourceschema/generate:
-    plugin: azureresourceschema
-    input: cm/transform
-    output-artifact: source-file-azureresourceschema
-  azureresourceschema/transform:
-    input: generate
-    output-artifact: source-file-azureresourceschema
-    scope: scope-transform-string
-  azureresourceschema/emitter:
-    input: transform
-    scope: scope-azureresourceschema/emitter
-
-scope-azureresourceschema/emitter:
-  input-artifact: source-file-azureresourceschema
-  output-uri-expr: $key
-
-scope-transform-string:
-  is-object: false
-
-output-artifact:
-- source-file-azureresourceschema
-
-scope-cm/emitter:
-  input-artifact: code-model-v1
-  is-object: true
-  output-uri-expr: |
-    "code-model-v1"
-
-scope-cm-yaml/emitter:
-  input-artifact: code-model-v1-yaml
-  is-object: true
-  output-uri-expr: |
-    "code-model-v1-yaml"
-```
->>>>>>> Pull in code from https://github.com/anthony-c-martin/bicep-types-poc
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
+contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
