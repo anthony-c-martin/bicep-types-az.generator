@@ -1,4 +1,6 @@
-﻿using AutoRest.Core.Model;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+using AutoRest.Core.Model;
 using Bicep.SerializedTypes.Concrete;
 
 namespace AutoRest.AzureResourceSchema.Models

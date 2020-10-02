@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><PowerShell># 2&gt;nul || type %~df0|C:\Windows\system32\find.exe /v "setlocal"|C:\Windows\system32\find.exe /v "errorlevel"|powershell.exe -noninteractive -&amp; exit %errorlevel% || #</PowerShell></PropertyGroup>
 
   <PropertyGroup>
     <AssemblyName>autorest.azureresourceschema</AssemblyName>
@@ -25,8 +24,12 @@
     <OutputPath>$(BaseOutputPath)</OutputPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="../autorest.common/src/autorest.common.csproj" />
+    <ProjectReference Include="../../autorest.common/src/autorest.common.csproj" />
     <ProjectReference Include="../Bicep.SerializedTypes/Bicep.SerializedTypes.csproj" />
   </ItemGroup>
 

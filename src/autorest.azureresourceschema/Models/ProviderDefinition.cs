@@ -1,4 +1,6 @@
-﻿namespace AutoRest.AzureResourceSchema.Models
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+namespace AutoRest.AzureResourceSchema.Models
 {
     using System;
     using System.Collections.Generic;
