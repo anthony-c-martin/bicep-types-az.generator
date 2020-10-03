@@ -72,9 +72,22 @@ namespace AutoRest.AzureResourceSchema
 
         private GenerateResult Process()
         {
-            foreach (var resource in definition.ResourceDefinitions)
+            var definitionsByDescriptor = definition.ResourceDefinitions
+                .ToLookup(x => x.Descriptor, ResourceDescriptor.Comparer)
+                .ToDictionary(x => x.Key, x => x.ToArray(), ResourceDescriptor.Comparer);
+
+            foreach (var kvp in definitionsByDescriptor)
             {
-                var descriptor = resource.Descriptor;
+                var descriptor = kvp.Key;
+
+                var definitions = definitionsByDescriptor[descriptor];
+                if (definitions.Length > 1)
+                {
+                    CodeModelProcessor.LogWarning($"Skipping resource type {descriptor.FullyQualifiedType} under path '{definitions[0].DeclaringMethod.Url}': Found multiple definitions for the same type");
+                    continue;
+                }
+
+                var resource = definitions.Single();
                 var putBody = resource.DeclaringMethod.Body?.ModelType as CompositeType;
                 var getBody = (resource.GetMethod?.Responses.GetValueOrDefault(HttpStatusCode.OK)?.Body as CompositeType) ?? 
                     (resource.GetMethod?.DefaultResponse?.Body as CompositeType) ??
