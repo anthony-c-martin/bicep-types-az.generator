@@ -2,3 +2,7 @@
 	path = autorest.common
 	url = https://github.com/Azure/autorest.common.git
 	branch = v3
+[submodule "bicep-types-az"]
+	path = bicep-types-az
+	url = https://github.com/Azure/bicep-types-az.git
+	branch = main
