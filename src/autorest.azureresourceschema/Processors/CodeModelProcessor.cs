@@ -55,7 +55,7 @@ namespace AutoRest.AzureResourceSchema.Processors
             }
 
             var parentScope = method.Url.Substring(0, finalProvidersMatch.Length - "providers/".Length);
-            var routingScope = method.Url.Substring(finalProvidersMatch.Length);
+            var routingScope = method.Url.Substring(finalProvidersMatch.Length).Trim('/');
 
             var providerNamespace = routingScope.Substring(0, routingScope.IndexOf('/'));
             if (IsPathVariable(providerNamespace))
