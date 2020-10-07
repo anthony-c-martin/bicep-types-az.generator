@@ -1,4 +1,4 @@
-import process from 'process';
+import process, { argv } from 'process';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -10,14 +10,19 @@ import chalk from 'chalk';
 const readdir = promisify(fs.readdir);
 const stat = promisify(fs.stat);
 
-const inputBaseDir = path.resolve(`${__dirname}/../../azure-rest-api-specs`);
 const outputBaseDir = path.resolve(`${__dirname}/../bicep-types`);
 const extensionDir = path.resolve(`${__dirname}/../`);
 const autorestBinary = os.platform() === 'win32' ? 'autorest.cmd' : 'autorest';
 const autorestCoreVersion = '3.0.6320';
 
 executeSynchronous(async () => {
+  const inputBaseDir = path.resolve(argv[2]);
+ 
   const readmePaths = await findReadmePaths(inputBaseDir);
+  if (readmePaths.length === 0) {
+    throw `Unable to find rest-api-specs in folder ${inputBaseDir}`;
+  }
+
   for (const path of readmePaths) {
     try {
       await generateSchema(path, outputBaseDir);

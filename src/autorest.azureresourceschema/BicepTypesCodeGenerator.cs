@@ -37,7 +37,7 @@ namespace AutoRest.AzureResourceSchema
                     var generatedTypes = result.TypeFactory.GetTypes();
 
                     var typesJson = TypeSerializer.Serialize(generatedTypes);
-                    await Write(typesJson, Path.Combine(result.ProviderNamespace, result.ApiVersion, "types.json"), true);
+                    await Write(typesJson, Path.Combine("types", result.ProviderNamespace, result.ApiVersion, "types.json"), true);
                 }
             }
         }
