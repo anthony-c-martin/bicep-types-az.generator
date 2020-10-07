@@ -12,7 +12,7 @@ using AutoRest.AzureResourceSchema.Models;
 using AutoRest.Core.Logging;
 using Bicep.SerializedTypes.Concrete;
 
-namespace AutoRest.AzureResourceSchema
+namespace AutoRest.AzureResourceSchema.Processors
 {
     public static class CodeModelProcessor
     {

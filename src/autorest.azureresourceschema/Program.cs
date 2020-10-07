@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoRest.AzureResourceSchema.Plugin;
 using AutoRest.Core;
 using AutoRest.Core.Extensibility;
 using AutoRest.Core.Model;
@@ -90,7 +91,7 @@ namespace AutoRest.AzureResourceSchema
             };
 
             // process
-            var plugin = new AutoRest.AzureResourceSchema.BicepTypesPlugin();
+            var plugin = new BicepTypesPlugin();
             
             using (plugin.Activate())
             {

@@ -9,7 +9,7 @@ using AutoRest.AzureResourceSchema.Models;
 using AutoRest.Core.Model;
 using Bicep.SerializedTypes.Concrete;
 
-namespace AutoRest.AzureResourceSchema
+namespace AutoRest.AzureResourceSchema.Processors
 {
     public class ProviderTypeGenerator
     {
@@ -318,10 +318,12 @@ namespace AutoRest.AzureResourceSchema
 
         private TypeBase ParseDictionaryType(DictionaryType putType, DictionaryType getType)
         {
+            var combinedType = putType ?? getType;
             var additionalPropertiesType = ParseType(putType?.ValueType, getType?.ValueType);
 
             return factory.Create(() => new ObjectType
             {
+                Name = combinedType.DeclarationName,
                 AdditionalProperties = factory.GetReference(additionalPropertiesType),
             });
         }

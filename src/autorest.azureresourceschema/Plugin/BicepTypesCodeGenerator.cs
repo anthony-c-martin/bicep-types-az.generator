@@ -3,12 +3,13 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoRest.AzureResourceSchema.Processors;
 using AutoRest.Core;
 using AutoRest.Core.Model;
 using AutoRest.Core.Utilities.Collections;
 using Bicep.SerializedTypes;
 
-namespace AutoRest.AzureResourceSchema
+namespace AutoRest.AzureResourceSchema.Plugin
 {
     public class BicepTypesCodeGenerator : CodeGenerator
     {
@@ -37,7 +38,10 @@ namespace AutoRest.AzureResourceSchema
                     var generatedTypes = result.TypeFactory.GetTypes();
 
                     var typesJson = TypeSerializer.Serialize(generatedTypes);
-                    await Write(typesJson, Path.Combine("types", result.ProviderNamespace, result.ApiVersion, "types.json"), true);
+                    await Write(typesJson, Path.Combine("types", result.ProviderNamespace, result.ApiVersion, "types.json"), false);
+
+                    var typesMarkdown = new TypeMarkdownWriter(generatedTypes).Write(result.ProviderNamespace, result.ApiVersion);
+                    await Write(typesMarkdown, Path.Combine("docs", result.ProviderNamespace, result.ApiVersion, "types.md"), false);
                 }
             }
         }
