@@ -115,26 +115,18 @@ namespace AutoRest.AzureResourceSchema.Processors
                     Body = factory.GetReference(resourceDefinition),
                 });
 
-                var putProperties = putBody.ComposedProperties
-                    .Where(p => p.SerializedName != null)
-                    .Where(p => !resourceProperties.ContainsKey(p.SerializedName))
-                    .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
-
-                var getProperties = getBody.ComposedProperties
-                    .Where(p => p.SerializedName != null)
-                    .Where(p => !resourceProperties.ContainsKey(p.SerializedName))
-                    .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
-
-                foreach (var property in putProperties.Keys.Concat(getProperties.Keys.Where(x => !putProperties.ContainsKey(x))))
+                foreach (var (propertyName, putProperty, getProperty) in GetCompositeTypeProperties(putBody, getBody, false))
                 {
-                    var isWritable = putProperties.TryGetValue(property, out var putProperty);
-                    var isReadable = getProperties.TryGetValue(property, out var getProperty);
+                    if (resourceProperties.ContainsKey(propertyName))
+                    {
+                        continue;
+                    }
 
                     var propertyDefinition = ParseType(putProperty?.ModelType, getProperty?.ModelType);
                     if (propertyDefinition != null)
                     {
                         var flags = ParsePropertyFlags(putProperty, getProperty);
-                        resourceProperties[property] = CreateObjectProperty(propertyDefinition, flags);
+                        resourceProperties[propertyName] = CreateObjectProperty(propertyDefinition, flags);
                     }
                 }
 
@@ -271,6 +263,37 @@ namespace AutoRest.AzureResourceSchema.Processors
             });
         }
 
+        private IEnumerable<(string name, Property putProperty, Property getProperty)> GetCompositeTypeProperties(CompositeType putType, CompositeType getType, bool includeBaseModelTypeProperties)
+        {
+            var putProperties = ((includeBaseModelTypeProperties ? putType?.ComposedProperties : putType?.Properties) ?? Enumerable.Empty<Property>())
+                .Where(p => p.Flavor == PropertyFlavor.Regular && p.SerializedName != null)
+                .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
+
+            var getProperties = ((includeBaseModelTypeProperties ? getType?.ComposedProperties : getType?.Properties) ?? Enumerable.Empty<Property>())
+                .Where(p => p.Flavor == PropertyFlavor.Regular && p.SerializedName != null)
+                .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var propertyName in putProperties.Keys.Concat(getProperties.Keys.Where(x => !putProperties.ContainsKey(x))))
+            {
+                putProperties.TryGetValue(propertyName, out var putProperty);
+                getProperties.TryGetValue(propertyName, out var getProperty);
+
+                yield return (propertyName, putProperty, getProperty);
+            }
+        }
+
+        private (DictionaryType putProperty, DictionaryType getProperty) GetCompositeTypeAdditionalProperties(CompositeType putType, CompositeType getType, bool includeBaseModelTypeProperties)
+        {
+            var putAdditionalProperty = ((includeBaseModelTypeProperties ? putType?.ComposedProperties : putType?.Properties) ?? Enumerable.Empty<Property>())
+                .Where(p => p.Flavor == PropertyFlavor.AdditionalProperties)
+                .FirstOrDefault();
+            var getAdditionalProperty = ((includeBaseModelTypeProperties ? getType?.ComposedProperties : getType?.Properties) ?? Enumerable.Empty<Property>())
+                .Where(p => p.Flavor == PropertyFlavor.AdditionalProperties)
+                .FirstOrDefault();
+
+            return (putAdditionalProperty?.ModelType as DictionaryType, getAdditionalProperty?.ModelType as DictionaryType);
+        }
+
         private TypeBase ParseCompositeType(CompositeType putType, CompositeType getType, bool includeBaseModelTypeProperties)
         {
             var combinedType = putType ?? getType;
@@ -286,25 +309,21 @@ namespace AutoRest.AzureResourceSchema.Processors
                 // definition.
                 namedDefinitions.Add(definitionName, definition);
 
-                var putProperties = ((includeBaseModelTypeProperties ? putType?.ComposedProperties : putType?.Properties) ?? Enumerable.Empty<Property>())
-                    .Where(p => p.SerializedName != null)
-                    .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
-
-                var getProperties = ((includeBaseModelTypeProperties ? getType?.ComposedProperties : getType?.Properties) ?? Enumerable.Empty<Property>())
-                    .Where(p => p.SerializedName != null)
-                    .ToDictionary(p => p.SerializedName, StringComparer.OrdinalIgnoreCase);
-
-                foreach (var property in putProperties.Keys.Concat(getProperties.Keys.Where(x => !putProperties.ContainsKey(x))))
+                foreach (var (propertyName, putProperty, getProperty) in GetCompositeTypeProperties(putType, getType, includeBaseModelTypeProperties))
                 {
-                    putProperties.TryGetValue(property, out var putProperty);
-                    getProperties.TryGetValue(property, out var getProperty);
-
                     var propertyDefinition = ParseType(putProperty?.ModelType, getProperty?.ModelType);
                     if (propertyDefinition != null)
                     {
                         var flags = ParsePropertyFlags(putProperty, getProperty);
-                        definitionProperties[property] = CreateObjectProperty(propertyDefinition, flags);
+                        definitionProperties[propertyName] = CreateObjectProperty(propertyDefinition, flags);
                     }
+                }
+
+                var (putAdditionalType, getAdditionalType) = GetCompositeTypeAdditionalProperties(putType, getType, includeBaseModelTypeProperties);
+                if ((putAdditionalType ?? getAdditionalType) != null && definition is ObjectType definitionObjectType)
+                {
+                    var additionalPropertiesType = ParseType(putAdditionalType?.ValueType, getAdditionalType?.ValueType);
+                    definitionObjectType.AdditionalProperties = factory.GetReference(additionalPropertiesType);
                 }
 
                 if (definition is DiscriminatedObjectType discriminatedObjectType)
