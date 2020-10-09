@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{50905A19-5AB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "autorest.azureresourceschema", "src\autorest.azureresourceschema\autorest.azureresourceschema.csproj", "{2EB13F22-5ECB-41C0-BBB7-B0BDE44AA5D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bicep.TypeIndexBuilder", "src\Bicep.TypeIndexBuilder\Bicep.TypeIndexBuilder.csproj", "{5C384A5C-0FAC-433E-923B-5135562B97AF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,8 +34,21 @@ Global
 		{2EB13F22-5ECB-41C0-BBB7-B0BDE44AA5D9}.Release|x64.Build.0 = Release|Any CPU
 		{2EB13F22-5ECB-41C0-BBB7-B0BDE44AA5D9}.Release|x86.ActiveCfg = Release|Any CPU
 		{2EB13F22-5ECB-41C0-BBB7-B0BDE44AA5D9}.Release|x86.Build.0 = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|x64.Build.0 = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Debug|x86.Build.0 = Debug|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|x64.ActiveCfg = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|x64.Build.0 = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|x86.ActiveCfg = Release|Any CPU
+		{5C384A5C-0FAC-433E-923B-5135562B97AF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2EB13F22-5ECB-41C0-BBB7-B0BDE44AA5D9} = {50905A19-5ABB-4B52-B517-9B75058B6722}
+		{5C384A5C-0FAC-433E-923B-5135562B97AF} = {50905A19-5ABB-4B52-B517-9B75058B6722}
 	EndGlobalSection
 EndGlobal
