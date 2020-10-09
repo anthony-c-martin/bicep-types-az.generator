@@ -25,22 +25,30 @@ namespace Bicep.TypeIndexBuilder
         private static (TypeBase type, int index) GetTypeWithIndex(TypeBase type, int index)
             => (type, index);
 
+        private static (string originalPath, string relativePath) GetRelativeAssemblyPath(string baseDir, string typeFile)
+        {
+            var relativePath = Path.GetFullPath(typeFile).Substring(Path.GetFullPath(baseDir).Length + 1)
+                .Replace(Path.DirectorySeparatorChar, '/')
+                .ToLowerInvariant();
+
+            return (typeFile, relativePath);
+        }
+
         private static IReadOnlyDictionary<string, TypeLocation> BuildIndex(string baseDir)
         {
-            var typeFiles = Directory.GetFiles(baseDir, "types.json", SearchOption.AllDirectories);
+            // Use a consistent sort order so that file system differences don't generate changes
+            var typeFiles = Directory.GetFiles(baseDir, "types.json", SearchOption.AllDirectories)
+                .Select(typeFile => GetRelativeAssemblyPath(baseDir, typeFile))
+                .OrderBy(x => x.relativePath, StringComparer.OrdinalIgnoreCase);
+
             var typeDictionary = new Dictionary<string, TypeLocation>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var typeFile in typeFiles)
+            foreach (var (originalPath, relativePath) in typeFiles)
             {
-                var content = File.ReadAllText(typeFile);
-
-                var relativePath = Path.GetFullPath(typeFile).Substring(Path.GetFullPath(baseDir).Length + 1)
-                    .Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                    .ToLowerInvariant();
-
+                var content = File.ReadAllText(originalPath);
                 var indexedTypes = TypeSerializer.Deserialize(content).Select(GetTypeWithIndex);
 
-                foreach (var (type, index) in indexedTypes)
+                foreach (var (type, index) in indexedTypes.OrderBy(x => x.index))
                 {
                     if (!(type is ResourceType resourceType))
                     {
