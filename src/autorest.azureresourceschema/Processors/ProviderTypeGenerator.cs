@@ -115,7 +115,7 @@ namespace AutoRest.AzureResourceSchema.Processors
                     Body = factory.GetReference(resourceDefinition),
                 });
 
-                foreach (var (propertyName, putProperty, getProperty) in GetCompositeTypeProperties(putBody, getBody, false))
+                foreach (var (propertyName, putProperty, getProperty) in GetCompositeTypeProperties(putBody, getBody, true))
                 {
                     if (resourceProperties.ContainsKey(propertyName))
                     {
