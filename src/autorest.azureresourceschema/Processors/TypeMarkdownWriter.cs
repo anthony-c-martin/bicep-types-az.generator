@@ -30,6 +30,7 @@ namespace AutoRest.AzureResourceSchema.Processors
                 ObjectType type => type.Name,
                 ArrayType type => $"{GetTypeName(type.ItemType)}[]",
                 ResourceType type => type.Name,
+                ResourceFunctionType type => $"{type.Name} ({GetTypeName(type.Resource)})",
                 UnionType type => string.Join(" | ", type.Elements.Select(GetTypeName).OrderBy(x => x)),
                 StringLiteralType type => $"'{type.Value}'",
                 DiscriminatedObjectType type => type.Name,
@@ -79,6 +80,10 @@ namespace AutoRest.AzureResourceSchema.Processors
                         EnqueuePendingWrite(objectType.AdditionalProperties.Type);
                     }
                     return;
+                case ResourceFunctionType resourceFunctionType:
+                    EnqueuePendingWrite(resourceFunctionType.Resource.Type);
+                    EnqueuePendingWrite(resourceFunctionType.Output.Type);
+                    return;
                 case DiscriminatedObjectType discriminatedObjectType:
                     foreach (var property in discriminatedObjectType.BaseProperties.OrderBy(x => x.Key))
                     {
@@ -100,6 +105,11 @@ namespace AutoRest.AzureResourceSchema.Processors
             foreach (var resourceType in types.OfType<ResourceType>().OrderBy(x => x.Name))
             {
                 EnqueuePendingWrite(resourceType.Body.Type);
+            }
+
+            foreach (var resourceFunctionType in types.OfType<ResourceFunctionType>().OrderBy(x => x.Name))
+            {
+                EnqueuePendingWrite(resourceFunctionType);
             }
 
             while (pendingWriteTypes.Any())
@@ -156,6 +166,17 @@ namespace AutoRest.AzureResourceSchema.Processors
                 {
                     WriteComplexType(element.Value.Type, nesting + 1);
                 }
+
+                WriteNewLine();
+                return;
+            }
+
+            if (type is ResourceFunctionType resourceFunctionType)
+            {
+                WriteHeading(nesting, $"{resourceFunctionType.Name} ({GetTypeName(resourceFunctionType.Resource)}");
+
+                WriteBullet("Resource", GetTypeName(resourceFunctionType.Resource));
+                WriteBullet("Output", GetTypeName(resourceFunctionType.Output));
 
                 WriteNewLine();
                 return;

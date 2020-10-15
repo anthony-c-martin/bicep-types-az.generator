@@ -31,7 +31,7 @@ namespace AutoRest.AzureResourceSchema.Processors
         private static readonly Regex subscriptionPrefix = new Regex("^/subscriptions/{\\w+}/$", RegexOptions.IgnoreCase);
         private static readonly Regex resourceGroupPrefix = new Regex("^/subscriptions/{\\w+}/resourceGroups/{\\w+}/$", RegexOptions.IgnoreCase);
 
-        private static bool ShouldProcess(CodeModel codeModel, Method method, string apiVersion)
+        private static bool ShouldProcessResourceType(CodeModel codeModel, Method method, string apiVersion)
         {
             if (method.HttpMethod != HttpMethod.Put)
             {
@@ -46,31 +46,37 @@ namespace AutoRest.AzureResourceSchema.Processors
             return Array.Exists(method.XMsMetadata.apiVersions, v => v.Equals(apiVersion));
         }
 
-        private static (bool success, string failureReason, IEnumerable<ResourceDescriptor> resourceDescriptors) ParseMethod(Method method, string apiVersion)
+        public static bool ShouldProcessResourceAction(CodeModel codeModel, Method method, string apiVersion)
+        {
+            if (method.HttpMethod != HttpMethod.Post)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(method.Url))
+            {
+                return false;
+            }
+
+            var actionName = method.Url.Split('/').Last();
+            if (!actionName.StartsWith("list", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return Array.Exists(method.XMsMetadata.apiVersions, v => v.Equals(apiVersion));
+        }
+
+        private static (bool success, string failureReason, ScopeType scopeType, string routingScope) ParseResourceScopes(Method method, string apiVersion)
         {
             var finalProvidersMatch = parentScopePrefix.Match(method.Url);
             if (!finalProvidersMatch.Success)
             {
-                return (false, "Unable to locate '/providers/' segment", Enumerable.Empty<ResourceDescriptor>());
+                return (false, "Unable to locate '/providers/' segment", ScopeType.Unknown, string.Empty);
             }
 
             var parentScope = method.Url.Substring(0, finalProvidersMatch.Length - "providers/".Length);
             var routingScope = method.Url.Substring(finalProvidersMatch.Length).Trim('/');
-
-            var providerNamespace = routingScope.Substring(0, routingScope.IndexOf('/'));
-            if (IsPathVariable(providerNamespace))
-            {
-                return (false, $"Unable to process parameterized provider namespace '{providerNamespace}'", Enumerable.Empty<ResourceDescriptor>());
-            }
-
-            var (success, failureReason, resourceTypesFound) = ParseResourceTypes(method, routingScope);
-            if (!success)
-            {
-                return (false, failureReason, Enumerable.Empty<ResourceDescriptor>());
-            }
-
-            var resNameParam = routingScope.Substring(routingScope.LastIndexOf('/') + 1);
-            var hasVariableName = IsPathVariable(resNameParam);
 
             var scopeType = ScopeType.Unknown;
             if (tenantPrefix.IsMatch(parentScope))
@@ -94,6 +100,26 @@ namespace AutoRest.AzureResourceSchema.Processors
                 scopeType = ScopeType.Extension;
             }
 
+            return (true, string.Empty, scopeType, routingScope);
+        }
+
+        private static (bool success, string failureReason, IEnumerable<ResourceDescriptor> resourceDescriptors) ParseResourceDescriptors(Method method, string apiVersion, ScopeType scopeType, string routingScope)
+        {
+            var providerNamespace = routingScope.Substring(0, routingScope.IndexOf('/'));
+            if (IsPathVariable(providerNamespace))
+            {
+                return (false, $"Unable to process parameterized provider namespace '{providerNamespace}'", Enumerable.Empty<ResourceDescriptor>());
+            }
+
+            var (success, failureReason, resourceTypesFound) = ParseResourceTypes(method, routingScope);
+            if (!success)
+            {
+                return (false, failureReason, Enumerable.Empty<ResourceDescriptor>());
+            }
+
+            var resNameParam = routingScope.Substring(routingScope.LastIndexOf('/') + 1);
+            var hasVariableName = IsPathVariable(resNameParam);
+
             return (true, string.Empty, resourceTypesFound.Select(type => new ResourceDescriptor
             {
                 ScopeType = scopeType,
@@ -103,6 +129,25 @@ namespace AutoRest.AzureResourceSchema.Processors
                 HasVariableName = hasVariableName,
                 XmsMetadata = method.XMsMetadata,
             }));
+        }
+
+        private static (bool success, string failureReason, IEnumerable<ResourceDescriptor> resourceDescriptors) ParseResourceMethod(Method method, string apiVersion)
+        {
+            var (parseScopeSuccess, parseScopeFailureReason, scopeType, routingScope) = ParseResourceScopes(method, apiVersion);
+
+            return ParseResourceDescriptors(method, apiVersion, scopeType, routingScope);
+        }
+        
+        private static (bool success, string failureReason, IEnumerable<ResourceDescriptor> resourceDescriptors, string actionName) ParseResourceActionMethod(Method method, string apiVersion)
+        {
+            var (parseScopeSuccess, parseScopeFailureReason, scopeType, routingScope) = ParseResourceScopes(method, apiVersion);
+
+            var resourceRoutingScope = routingScope.Substring(0, routingScope.LastIndexOf('/'));
+            var actionName = routingScope.Substring(resourceRoutingScope.Length + 1);
+
+            var (success, failureReason, resourceDescriptors) = ParseResourceDescriptors(method, apiVersion, scopeType, resourceRoutingScope);
+
+            return (success, failureReason, resourceDescriptors, actionName);
         }
 
         private static (bool success, string failureReason, IEnumerable<IEnumerable<string>> resourceTypesFound) ParseResourceTypes(Method method, string routingScope)
@@ -147,6 +192,21 @@ namespace AutoRest.AzureResourceSchema.Processors
             return (true, string.Empty, resourceTypes);
         }
 
+        private static ProviderDefinition GetProviderDefinition(IDictionary<string, ProviderDefinition> providerDefinitions, CodeModel codeModel, ResourceDescriptor descriptor, string apiVersion)
+        {
+            if (!providerDefinitions.ContainsKey(descriptor.ProviderNamespace))
+            {
+                providerDefinitions[descriptor.ProviderNamespace] = new ProviderDefinition
+                {
+                    Namespace = descriptor.ProviderNamespace,
+                    ApiVersion = apiVersion,
+                    Model = codeModel,
+                };
+            }
+            
+            return providerDefinitions[descriptor.ProviderNamespace];
+        }
+
         public static IEnumerable<GenerateResult> GenerateTypes(CodeModel serviceClient, string apiVersion)
         {            
             if (serviceClient == null)
@@ -156,12 +216,12 @@ namespace AutoRest.AzureResourceSchema.Processors
 
             var providerDefinitions = new Dictionary<string, ProviderDefinition>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var putMethod in serviceClient.Methods.Where(method => ShouldProcess(serviceClient, method, apiVersion)))
+            foreach (var putMethod in serviceClient.Methods.Where(method => ShouldProcessResourceType(serviceClient, method, apiVersion)))
             {
-                var (success, failureReason, resourceDescriptors) = ParseMethod(putMethod, apiVersion);
+                var (success, failureReason, resourceDescriptors) = ParseResourceMethod(putMethod, apiVersion);
                 if (!success)
                 {
-                    LogWarning($"Skipping path '{putMethod.Url}': {failureReason}");
+                    LogWarning($"Skipping resource PUT path '{putMethod.Url}': {failureReason}");
                     continue;
                 }
 
@@ -169,22 +229,35 @@ namespace AutoRest.AzureResourceSchema.Processors
 
                 foreach (var descriptor in resourceDescriptors)
                 {
-                    if (!providerDefinitions.ContainsKey(descriptor.ProviderNamespace))
-                    {
-                        providerDefinitions[descriptor.ProviderNamespace] = new ProviderDefinition
-                        {
-                            Namespace = descriptor.ProviderNamespace,
-                            ApiVersion = apiVersion,
-                            Model = serviceClient,
-                        };
-                    }
-                    var providerDefinition = providerDefinitions[descriptor.ProviderNamespace];
+                    var providerDefinition = GetProviderDefinition(providerDefinitions, serviceClient, descriptor, apiVersion);
 
                     providerDefinition.ResourceDefinitions.Add(new ResourceDefinition
                     {
                         Descriptor = descriptor,
                         DeclaringMethod = putMethod,
                         GetMethod = getMethod,
+                    });
+                }
+            }
+
+            foreach (var listActionMethod in serviceClient.Methods.Where(method => ShouldProcessResourceAction(serviceClient, method, apiVersion)))
+            {
+                var (success, failureReason, resourceDescriptors, actionName) = ParseResourceActionMethod(listActionMethod, apiVersion);
+                if (!success)
+                {
+                    LogWarning($"Skipping resource POST action path '{listActionMethod.Url}': {failureReason}");
+                    continue;
+                }
+
+                foreach (var descriptor in resourceDescriptors)
+                {
+                    var providerDefinition = GetProviderDefinition(providerDefinitions, serviceClient, descriptor, apiVersion);
+
+                    providerDefinition.ResourceListActions.Add(new ResourceListActionDefinition
+                    {
+                        ActionName = actionName,
+                        Descriptor = descriptor,
+                        DeclaringMethod = listActionMethod,
                     });
                 }
             }

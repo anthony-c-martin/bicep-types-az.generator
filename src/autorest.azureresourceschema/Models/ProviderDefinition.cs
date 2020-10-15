@@ -15,5 +15,7 @@ namespace AutoRest.AzureResourceSchema.Models
         public CodeModel Model { get; set; }
 
         public IList<ResourceDefinition> ResourceDefinitions { get; } = new List<ResourceDefinition>();
+
+        public IList<ResourceListActionDefinition> ResourceListActions { get; } = new List<ResourceListActionDefinition>();
     }
 }
